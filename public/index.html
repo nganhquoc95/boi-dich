@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng Dụng Bói Dịch - Lập Quẻ Kinh Dịch</title>
+    <link rel="stylesheet" href="/assets/fontawesome-free-6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script src="/assets/tailwindcss.3.4.16.js"></script>
+    <script src="/assets/hexagrams.js"></script>
+    <script defer src="/assets/app.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        socket.on('reload', () => {
+            console.log('Reloading page...');
+            window.location.reload();
+        });
+    </script>
+
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-amber-800 mb-2">BÓI DỊCH</h1>
+            <p class="text-lg text-gray-700">Ứng dụng lập quẻ bói dịch - Gieo quẻ, luận đoán và nhận lời khuyên</p>
+        </header>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex border-b mb-6">
+                <div class="method-tab active" data-method="coin">Gieo Quẻ Đồng Xu</div>
+                <div class="method-tab" data-method="plum">Mai Hoa Dịch Số</div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-8">
+                <div class="md:w-1/2">
+                    <h2 class="text-2xl font-semibold text-amber-800 mb-4">Đặt câu hỏi của bạn</h2>
+                    <textarea id="question-input" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4" rows="4" placeholder="Hãy tập trung và viết câu hỏi của bạn vào đây..."></textarea>
+                    <button id="cast-button" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center disabled:bg-gray-300 disabled:text-gray-500">
+                        <i class="fas fa-coins mr-2"></i> Gieo Quẻ
+                    </button>
+                </div>
+                
+                <div class="md:w-1/2">
+                    <div id="coin-method" class="method-content active">
+                        <h2 class="text-2xl font-semibold text-amber-800 mb-4">Cách gieo quẻ Đồng Xu</h2>
+                        <ol class="list-decimal pl-5 space-y-2 text-gray-700">
+                            <li>Tập trung vào câu hỏi của bạn</li>
+                            <li>Viết câu hỏi vào ô bên trái</li>
+                            <li>Nhấn nút "Gieo Quẻ"</li>
+                            <li>Tung đồng xu 3 lần để tạo mỗi hào</li>
+                            <li>Lặp lại 6 lần để hoàn thành quẻ</li>
+                            <li>Xem kết quả quẻ dịch và lời giải</li>
+                        </ol>
+                    </div>
+                    
+                    <div id="plum-method" class="method-content">
+                        <h2 class="text-2xl font-semibold text-amber-800 mb-4">Cách gieo quẻ Mai Hoa</h2>
+                        <ol class="list-decimal pl-5 space-y-2 text-gray-700">
+                            <li>Tập trung vào câu hỏi của bạn</li>
+                            <li>Viết câu hỏi vào ô bên trái</li>
+                            <li>Nhập 3 con số ngẫu nhiên từ 1-999</li>
+                            <li>Nhấn nút "Gieo Quẻ"</li>
+                            <li>Xem kết quả quẻ chủ, quẻ biến và hào động</li>
+                        </ol>
+                        <div class="mt-4">
+                            <h3 class="font-semibold mb-2">Nhập 3 số ngẫu nhiên:</h3>
+                            <div class="flex">
+                                <input type="number" id="plum-number1" class="plum-blossom-input" min="1" max="999" placeholder="Số 1">
+                                <input type="number" id="plum-number2" class="plum-blossom-input" min="1" max="999" placeholder="Số 2">
+                                <input type="number" id="plum-number3" class="plum-blossom-input" min="1" max="999" placeholder="Số 3">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                        <h3 class="font-semibold text-amber-800 mb-2">Lưu ý quan trọng:</h3>
+                        <p class="text-gray-700">Kết quả chỉ mang tính chất tham khảo. Vận mệnh nằm trong tay bạn, hãy luôn giữ tâm thiện lành và hành động đúng đắn.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="coin-toss-section" class="hidden bg-white rounded-xl shadow-lg p-6 mb-8 text-center">
+            <h2 class="text-2xl font-semibold text-amber-800 mb-6">Gieo Quẻ Bằng Đồng Xu</h2>
+            <div class="mb-4">
+                <p class="text-gray-700">Hào thứ <span id="current-line" class="font-bold">1</span>/6</p>
+            </div>
+            <div class="flex justify-center gap-8 mb-8">
+                <div class="text-center">
+                    <div id="coin1" class="coin coin-heads mx-auto mb-2">H</div>
+                    <span>Xu 1</span>
+                </div>
+                <div class="text-center">
+                    <div id="coin2" class="coin coin-heads mx-auto mb-2">H</div>
+                    <span>Xu 2</span>
+                </div>
+                <div class="text-center">
+                    <div id="coin3" class="coin coin-heads mx-auto mb-2">H</div>
+                    <span>Xu 3</span>
+                </div>
+            </div>
+            <div class="text-center">
+                <button id="toss-button" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                    Tung Đồng Xu
+                </button>
+            </div>
+        </div>
+        
+        <div id="result-section" class="hidden bg-white rounded-xl shadow-lg p-6 mb-8 fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-semibold text-amber-800 mb-2">Kết Quả Quẻ Dịch</h2>
+                <p id="user-question" class="text-gray-600 italic">"Câu hỏi của bạn sẽ hiển thị ở đây"</p>
+                <p id="method-used" class="text-sm text-gray-500 mt-2">Phương pháp: Gieo quẻ đồng xu</p>
+            </div>
+            
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold text-amber-800 mb-4 text-center">Quẻ Chủ</h3>
+                <div class="flex flex-col md:flex-row gap-8 items-center md:items-start justify-center">
+                    <div class="text-center">
+                        <div id="main-hexagram-display" class="hexagram-container mb-4"></div>
+                        <h4 id="main-hexagram-name" class="hexagram-name mb-2">Quẻ: </h4>
+                        <p id="main-hexagram-number" class="text-gray-700">Số: </p>
+                    </div>
+                    <div class="md:w-1/2">
+                        <h4 class="text-lg font-semibold text-amber-800 mb-2">Lời Giải:</h4>
+                        <div id="main-hexagram-judgment" class="prose max-w-none text-gray-700">
+                            <p>Nội dung lời giải sẽ hiển thị ở đây...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="changing-section" class="mb-8">
+                <!-- <h3 class="text-xl font-semibold text-amber-800 mb-4 text-center">Hào Động</h3>
+                <div class="text-center mb-6">
+                    <p id="changing-lines" class="text-gray-700">Hào động: <span id="changing-lines-display" class="font-bold">Không có</span></p>
+                </div> -->
+                
+                <h3 class="text-xl font-semibold text-amber-800 mb-4 text-center">Quẻ Biến</h3>
+                <div class="flex flex-col md:flex-row gap-8 items-center md:items-start justify-center">
+                    <div class="text-center">
+                        <div id="changed-hexagram-display" class="hexagram-container mb-4"></div>
+                        <h4 id="changed-hexagram-name" class="hexagram-name mb-2">Quẻ: </h4>
+                        <p id="changed-hexagram-number" class="text-gray-700">Số: </p>
+                    </div>
+                    <div class="md:w-1/2">
+                        <h4 class="text-lg font-semibold text-amber-800 mb-2">Lời Giải:</h4>
+                        <div id="changed-hexagram-judgment" class="prose max-w-none text-gray-700">
+                            <p>Nội dung lời giải quẻ biến sẽ hiển thị ở đây...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold text-amber-800 mb-3">Lời Khuyên Tổng Hợp:</h3>
+                <div id="hexagram-advice" class="prose max-w-none text-gray-700">
+                    <p>Lời khuyên sẽ hiển thị ở đây...</p>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center">
+                <button id="new-cast-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg transition duration-300 mr-4">
+                    Gieo Quẻ Mới
+                </button>
+                <button id="save-button" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+                    <i class="fas fa-bookmark mr-2"></i>Lưu Kết Quả
+                </button>
+            </div>
+        </div>
+        
+        <div id="saved-readings" class="hidden bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-semibold text-amber-800 mb-4">Các Lần Gieo Quẻ Đã Lưu</h2>
+            <div id="saved-list" class="space-y-4">
+                <!-- Saved readings will appear here -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>
