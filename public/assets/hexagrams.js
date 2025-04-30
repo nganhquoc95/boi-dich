@@ -452,4 +452,4 @@ const hexagrams = [
     }
 ];
 
-window.hexagrams = hexagrams;
+export default hexagrams;

@@ -1,3 +1,6 @@
+import * as hexagrams from './hexagrams.js';
+import * as eightTrigramsInnate from './eightTrigrams.js';
+
 // DOM elements
 const questionInput = document.getElementById('question-input');
 const castButton = document.getElementById('cast-button');
@@ -12,7 +15,6 @@ const mainHexagramDisplay = document.getElementById('main-hexagram-display');
 const mainHexagramName = document.getElementById('main-hexagram-name');
 const mainHexagramNumber = document.getElementById('main-hexagram-number');
 const mainHexagramJudgment = document.getElementById('main-hexagram-judgment');
-// const changingLinesDisplay = document.getElementById('changing-lines-display');
 const changedHexagramDisplay = document.getElementById('changed-hexagram-display');
 const changedHexagramName = document.getElementById('changed-hexagram-name');
 const changedHexagramNumber = document.getElementById('changed-hexagram-number');
@@ -59,14 +61,14 @@ plumNumberInputs.forEach(input => {
     input.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/[^0-9]/g, '');
         if (e.target.value > 999) e.target.value = 999;
-        if (e.target.value < 1 && e.target.value !== '') e.target.value = 1;
+        if (e.target.value < 0 && e.target.value !== '') e.target.value = 0;
     });
 });
 
 // Functions
 function switchMethod(method) {
     currentMethod = method;
-    
+
     // Update UI
     methodTabs.forEach(tab => {
         if (tab.getAttribute('data-method') === method) {
@@ -75,7 +77,7 @@ function switchMethod(method) {
             tab.classList.remove('active');
         }
     });
-    
+
     methodContents.forEach(content => {
         if (content.id === `${method}-method`) {
             content.classList.add('active');
@@ -99,7 +101,7 @@ function startCasting() {
         return;
     }
 
-    if (!isPlumMethodValid()) {
+    if (!isCoinMethod && !isPlumMethodValid()) {
         alert('Vui lòng nhập tất cả các số cho phương pháp Mai Hoa Dịch Số.');
         return;
     }
@@ -107,7 +109,7 @@ function startCasting() {
     userQuestionDisplay.textContent = `"${question}"`;
     questionInput.disabled = true;
     castButton.disabled = true;
-    
+
     if (isCoinMethod) {
         methodUsedDisplay.textContent = 'Phương pháp: Gieo quẻ đồng xu';
         startCoinMethod();
@@ -125,7 +127,7 @@ function startCoinMethod() {
     changingLines = [];
     currentLine = 1;
     currentLineDisplay.textContent = currentLine;
-    
+
     // Reset coins
     tossResults = [0, 0, 0];
     coins.forEach(coin => {
@@ -133,7 +135,7 @@ function startCoinMethod() {
         coin.classList.add('coin-heads');
         coin.textContent = 'H';
     });
-    
+
     tossButton.disabled = false;
     coinTossSection.classList.remove('hidden');
 }
@@ -160,20 +162,15 @@ function startPlumMethod() {
 }
 
 function generatePlumBlossomHexagram(numbers) {
-    // Plum Blossom method:
-    // 1. First number % 8 = upper trigram (if 0 = 8)
-    // 2. Second number % 8 = lower trigram (if 0 = 8)
-    // 3. Third number % 6 = changing line (if 0 = 6)
-    
-    const upperNum = numbers[0] % 8 || 8; // 0 becomes 8
-    const lowerNum = numbers[1] % 8 || 0; // 0 becomes 8
-    const changingLineNum = numbers[2] % 6 || 6; // 0 becomes 6
+    const upperNum = numbers[0] % 8 || 8;
+    const lowerNum = numbers[1] % 8 || 8;
+    const changingLineNum = numbers.reduce((a, n) => a + Math.abs(n)) % 6 || 6;
 
-    const upperNum2Binary = Number(upperNum - 1).toString(2).padStart(3, '0');
-    const lowerNum2Binary = Number(lowerNum - 1).toString(2).padStart(3, '0');
-    
+    const upperNum2Binary = eightTrigramsInnate[upperNum - 1];
+    const lowerNum2Binary = eightTrigramsInnate[lowerNum - 1];
+
     // Generate hexagram lines
-    hexagramLines = [...upperNum2Binary.split('').map(Number), ...lowerNum2Binary.split('').map(Number)];
+    hexagramLines = [[...upperNum2Binary].reverse(), [...lowerNum2Binary].reverse()].flat();
     changingLines = [];
 
     // Set changing line (1-based index)
@@ -181,14 +178,11 @@ function generatePlumBlossomHexagram(numbers) {
 
     // Generate changed hexagram by flipping the changing line
     const changedLines = [...hexagramLines];
-    changedLines[changingLineNum - 1] = changedLines[changingLineNum - 1] === 0 ? 1 : 0;
-    
-    // Find hexagrams
-    const currentHexagramKey = [...hexagramLines].reverse().join("");
-    const changedHexagramKey = [...changedLines].reverse().join("");
+    changedLines[Math.abs(changingLineNum - 1)] = changedLines[Math.abs(changingLineNum - 1)] === 0 ? 1 : 0;
 
-    currentHexagram = hexagrams.find(h => h.key === currentHexagramKey);
-    changedHexagram = hexagrams.find(h => h.key === changedHexagramKey);
+    // Find hexagrams based on keys
+    currentHexagram = hexagrams.find(h => h.key === hexagramLines.join(""));
+    changedHexagram = hexagrams.find(h => h.key === changedLines.join(""));
 
     // Display results
     displayResults(hexagramLines, changingLines, changedLines);
@@ -200,18 +194,18 @@ function tossCoins() {
         coin.classList.add('tossing');
         coin.textContent = '';
     });
-    
+
     tossButton.disabled = true;
-    
+
     // Stop tossing after 1.5 seconds and show results
     setTimeout(() => {
         coins.forEach((coin, index) => {
             coin.classList.remove('tossing');
-            
+
             // Random result (0 = heads, 1 = tails)
             const result = Math.floor(Math.random() * 2);
             tossResults[index] = result;
-            
+
             if (result === 0) {
                 coin.classList.remove('coin-tails');
                 coin.classList.add('coin-heads');
@@ -222,17 +216,17 @@ function tossCoins() {
                 coin.textContent = 'T';
             }
         });
-        
+
         // Determine line type based on coin toss results
         // In I Ching: 
         // 3 heads = old yang (changing yang)
         // 3 tails = old yin (changing yin)
         // 2 heads + 1 tail = young yang
         // 2 tails + 1 head = young yin
-        
+
         const headsCount = tossResults.filter(r => r === 0).length;
         let lineType, isChanging;
-        
+
         if (headsCount === 3) {
             lineType = 1; // yang
             isChanging = true;
@@ -246,23 +240,27 @@ function tossCoins() {
             lineType = 0; // yin
             isChanging = false;
         }
-        
+
         // Add to hexagram lines (from bottom to top)
         hexagramLines.unshift(lineType);
-        
+
         // If changing line, record its position (0-based, bottom to top)
         if (isChanging) {
-            changingLines.push(6 - currentLine); // because we're building from bottom
+            changingLines.push(currentLine - 1); // because we're building from bottom
         }
-        
+
         // Move to next line or finish
         if (currentLine < 6) {
             currentLine++;
             currentLineDisplay.textContent = currentLine;
             tossButton.disabled = false;
         } else {
+            // Reverse the hexagram lines for correct display
+            // Note: The hexagram lines are built from bottom to top, so we need to reverse them
+            // to match the I Ching representation.
+            // Example: [1, 0, 0, 1, 1, 0] becomes [0, 1, 1, 0, 0, 1]
+            hexagramLines = [...hexagramLines].reverse();
 
-            console.info({hexagramLines});
             // Hexagram complete, interpret results
             interpretCoinResults();
         }
@@ -275,11 +273,10 @@ function interpretCoinResults() {
     changingLines.forEach(linePos => {
         changedLines[linePos] = changedLines[linePos] === 0 ? 1 : 0;
     });
-    
-    // Find hexagrams (for demo, we'll just pick random ones)
-    currentHexagram = hexagrams[Math.floor(Math.random() * hexagrams.length)];
-    changedHexagram = hexagrams[Math.floor(Math.random() * hexagrams.length)];
-    
+
+    currentHexagram = hexagrams.find(h => h.key === hexagramLines.join(""));
+    changedHexagram = hexagrams.find(h => h.key === changedLines.join(""));
+
     // Display results
     displayResults(hexagramLines, changingLines, changedLines);
 }
@@ -290,17 +287,7 @@ function displayResults(mainLines, changingLines, changedLines) {
     mainHexagramName.textContent = `Quẻ: ${currentHexagram.name}`;
     mainHexagramNumber.textContent = `Số: ${currentHexagram.number}`;
     mainHexagramJudgment.innerHTML = `<p>${currentHexagram.judgment}</p>`;
-    
-    // Display changing lines info
-    /**
-    if (changingLines.length > 0) {
-        const linesText = changingLines.map(pos => 6 - pos).join(', '); // convert to 1-based from top
-        changingLinesDisplay.textContent = linesText;
-    } else {
-        changingLinesDisplay.textContent = 'Không có';
-    }
-    */
-    
+
     // Display changed hexagram if there are changing lines
     if (changingLines.length > 0) {
         displayHexagram(changedHexagramDisplay, changedLines);
@@ -311,18 +298,18 @@ function displayResults(mainLines, changingLines, changedLines) {
     } else {
         document.getElementById('changing-section').classList.add('hidden');
     }
-    
+
     // Generate combined advice
     let advice = currentHexagram.advice;
     if (changingLines.length > 0) {
         advice += `<br><br>Với hào động, ${changedHexagram.advice.toLowerCase()}`;
     }
     hexagramAdvice.innerHTML = `<p>${advice}</p>`;
-    
+
     // Show results
     coinTossSection.classList.add('hidden');
     resultSection.classList.remove('hidden');
-    
+
     // Show saved readings if any
     if (savedHexagrams.length > 0) {
         savedReadings.classList.remove('hidden');
@@ -337,13 +324,13 @@ function displayHexagram(container, lines, changingLines = []) {
     for (let i = 5; i >= 0; i--) {
         const line = document.createElement('div');
         const isChanging = changingLines.includes(i);
-        
+
         if (lines[i] === 0) {
             line.className = isChanging ? 'yin-line broken moving-line' : 'yin-line broken';
         } else {
             line.className = isChanging ? 'yang-line moving-line' : 'yang-line';
         }
-        
+
         container.appendChild(line);
     }
 }
@@ -354,10 +341,10 @@ function resetCasting() {
     castButton.disabled = false;
     resultSection.classList.add('hidden');
     coinTossSection.classList.add('hidden');
-    
+
     // Reset plum blossom inputs
     plumNumberInputs.forEach(input => input.value = '');
-    
+
     // Reset coins
     tossResults = [0, 0, 0];
     coins.forEach(coin => {
@@ -365,7 +352,7 @@ function resetCasting() {
         coin.classList.add('coin-heads');
         coin.textContent = 'H';
     });
-    
+
     tossButton.disabled = false;
     currentHexagram = null;
     changingLines = [];
@@ -375,7 +362,7 @@ function resetCasting() {
 
 function saveReading() {
     if (!currentHexagram) return;
-    
+
     const reading = {
         method: currentMethod,
         hexagram: currentHexagram,
@@ -384,10 +371,10 @@ function saveReading() {
         question: userQuestionDisplay.textContent,
         date: new Date().toLocaleString()
     };
-    
+
     savedHexagrams.push(reading);
     localStorage.setItem('savedHexagrams', JSON.stringify(savedHexagrams));
-    
+
     alert('Đã lưu kết quả gieo quẻ!');
     savedReadings.classList.remove('hidden');
     displaySavedReadings();
@@ -395,23 +382,23 @@ function saveReading() {
 
 function displaySavedReadings() {
     savedList.innerHTML = '';
-    
+
     savedHexagrams.forEach((reading, index) => {
         const readingElement = document.createElement('div');
         readingElement.className = 'bg-amber-50 p-4 rounded-lg border border-amber-200';
-        
+
         let changingLinesText = '';
         if (reading.changingLines && reading.changingLines.length > 0) {
             const lines = reading.changingLines.map(pos => 6 - pos).join(', ');
             changingLinesText = `<p class="text-gray-700 text-sm">Hào động: ${lines}</p>`;
         }
-        
+
         readingElement.innerHTML = `
             <div class="flex justify-between items-start mb-2">
                 <div>
                     <h3 class="font-semibold text-amber-800">${reading.hexagram.name}</h3>
-                    ${reading.changedHexagram ? 
-                      `<p class="text-gray-700 text-sm">Biến thành: ${reading.changedHexagram.name}</p>` : ''}
+                    ${reading.changedHexagram ?
+                `<p class="text-gray-700 text-sm">Biến thành: ${reading.changedHexagram.name}</p>` : ''}
                     ${changingLinesText}
                 </div>
                 <div class="text-right">
@@ -432,61 +419,57 @@ function displaySavedReadings() {
 }
 
 // These need to be global to be callable from onclick attributes
-window.viewSavedReading = function(index) {
+window.viewSavedReading = function (index) {
     if (index >= 0 && index < savedHexagrams.length) {
         const reading = savedHexagrams[index];
         currentHexagram = reading.hexagram;
         changedHexagram = reading.changedHexagram;
         changingLines = reading.changingLines || [];
-        
+
         // Generate lines for display
-        const mainLines = [1, 1, 1, 1, 1, 1]; // All yang for demo
-        const changedLines = [...mainLines];
-        changingLines.forEach(pos => {
-            changedLines[pos] = changedLines[pos] === 0 ? 1 : 0;
-        });
-        
+        const mainLines = currentHexagram.key.split('').map(Number);
+        const changedLines = changedHexagram.key.split('').map(Number);
+
         // Display
         displayHexagram(mainHexagramDisplay, mainLines, changingLines);
         mainHexagramName.textContent = `Quẻ: ${currentHexagram.name}`;
         mainHexagramNumber.textContent = `Số: ${currentHexagram.number}`;
         mainHexagramJudgment.innerHTML = `<p>${currentHexagram.judgment}</p>`;
-        
+
         if (changingLines.length > 0 && changedHexagram) {
             displayHexagram(changedHexagramDisplay, changedLines);
             changedHexagramName.textContent = `Quẻ: ${changedHexagram.name}`;
             changedHexagramNumber.textContent = `Số: ${changedHexagram.number}`;
             changedHexagramJudgment.innerHTML = `<p>${changedHexagram.judgment}</p>`;
             document.getElementById('changing-section').classList.remove('hidden');
-            // changingLinesDisplay.textContent = changingLines.map(pos => 6 - pos).join(', ');
         } else {
             document.getElementById('changing-section').classList.add('hidden');
         }
-        
+
         userQuestionDisplay.textContent = reading.question;
         methodUsedDisplay.textContent = `Phương pháp: ${reading.method === 'coin' ? 'Gieo quẻ đồng xu' : 'Mai Hoa Dịch Số'}`;
-        
+
         // Generate combined advice
         let advice = currentHexagram.advice;
         if (changingLines.length > 0 && changedHexagram) {
             advice += `<br><br>Với hào động, ${changedHexagram.advice.toLowerCase()}`;
         }
         hexagramAdvice.innerHTML = `<p>${advice}</p>`;
-        
+
         resultSection.classList.remove('hidden');
         coinTossSection.classList.add('hidden');
-        
+
         // Scroll to result section
         resultSection.scrollIntoView({ behavior: 'smooth' });
     }
 };
 
-window.deleteSavedReading = function(index) {
+window.deleteSavedReading = function (index) {
     if (confirm('Bạn có chắc muốn xóa lần gieo quẻ này?')) {
         savedHexagrams.splice(index, 1);
         localStorage.setItem('savedHexagrams', JSON.stringify(savedHexagrams));
         displaySavedReadings();
-        
+
         if (savedHexagrams.length === 0) {
             savedReadings.classList.add('hidden');
         }

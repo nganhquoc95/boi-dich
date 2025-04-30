@@ -7,9 +7,8 @@
     <link rel="stylesheet" href="/assets/fontawesome-free-6.7.2/css/all.min.css">
     <link rel="stylesheet" href="/assets/styles.css">
     <script src="/assets/tailwindcss.3.4.16.js"></script>
-    <script src="/assets/hexagrams.js"></script>
-    <script defer src="/assets/app.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script type="module" defer src="/assets/app.js"></script>
     <script>
         const socket = io();
         socket.on('reload', () => {
@@ -132,11 +131,6 @@
             </div>
             
             <div id="changing-section" class="mb-8">
-                <!-- <h3 class="text-xl font-semibold text-amber-800 mb-4 text-center">Hào Động</h3>
-                <div class="text-center mb-6">
-                    <p id="changing-lines" class="text-gray-700">Hào động: <span id="changing-lines-display" class="font-bold">Không có</span></p>
-                </div> -->
-                
                 <h3 class="text-xl font-semibold text-amber-800 mb-4 text-center">Quẻ Biến</h3>
                 <div class="flex flex-col md:flex-row gap-8 items-center md:items-start justify-center">
                     <div class="text-center">
