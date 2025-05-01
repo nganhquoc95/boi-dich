@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ứng Dụng Bói Dịch - Lập Quẻ Kinh Dịch</title>
     <link rel="stylesheet" href="/assets/fontawesome-free-6.7.2/css/all.min.css">
-    <link rel="stylesheet" href="/assets/styles.css">
-    <script src="/assets/tailwindcss.3.4.16.js"></script>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <script src="/assets/js/tailwindcss.3.4.16.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" defer src="/assets/app.js"></script>
     <script>
@@ -109,6 +109,7 @@
         <div id="result-section" class="hidden bg-white rounded-xl shadow-lg p-6 mb-8 fade-in">
             <div class="text-center mb-8">
                 <h2 class="text-2xl font-semibold text-amber-800 mb-2">Kết Quả Quẻ Dịch</h2>
+                <p id="date-of-hexagram" class="font-semibold text-gray-700 mb-2">Ngày lập quẻ: </p>
                 <p id="user-question" class="text-gray-600 italic">"Câu hỏi của bạn sẽ hiển thị ở đây"</p>
                 <p id="method-used" class="text-sm text-gray-500 mt-2">Phương pháp: Gieo quẻ đồng xu</p>
             </div>

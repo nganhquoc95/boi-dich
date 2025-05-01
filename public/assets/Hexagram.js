@@ -7,6 +7,7 @@ class Hexagram {
      * @param {Array} hexagramLines - The lines of the hexagram
      * @param {Array} changingLines - The lines that are changing
      * @param {boolean} completed - Indicates if the casting is completed
+     * @param {object} solarDate - The date of the casting
      * @param {number} currentLine - The current line being cast
      * @param {Object} hexagram - The hexagram object
      * @param {Object} changedHexagram - The hexagram object after changes
@@ -22,7 +23,7 @@ class Hexagram {
         this.changingLines = [];
         this.completed = false;
         this.currentLine = 1;
-
+        this.solarDate = null;
         this.hexagram = null;
         this.changedHexagram = null;
     }
@@ -95,9 +96,14 @@ class Hexagram {
         this.changingLines = [];
         this.changedLines = [];
         this.completed = false;
+        this.currentLine = 1;
+        this.solarDate = null;
         this.hexagram = null;
         this.changedHexagram = null;
-        this.currentLine = 1;
+    }
+
+    setSolarDate(date) {
+        this.solarDate = date;
     }
 
     /**
@@ -237,9 +243,6 @@ class Hexagram {
                 this.changingLines.push(line + 1);
             }
         };
-
-        console.log({ changingLines: this.changingLines });
-        console.log({ hexagramLines: this.hexagramLines });
 
         return {
             hexagram: this.getHexagram(),

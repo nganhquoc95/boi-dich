@@ -469,5 +469,4 @@ class LunarDate extends Calendar {
     }
 }
 
-exports.LunarDate = LunarDate;
-exports.SolarDate = SolarDate;
+export { LunarDate, SolarDate };

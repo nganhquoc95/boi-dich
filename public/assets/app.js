@@ -1,6 +1,5 @@
-import { hexagramData } from './data/hexagramData.js';
-import { trigramData } from './data/trigramData.js';
 import { Hexagram } from './Hexagram.js';
+import { SolarDate } from './LunarDate.js';
 
 // DOM elements
 const questionInput = document.getElementById('question-input');
@@ -10,6 +9,7 @@ const currentLineDisplay = document.getElementById('current-line');
 const tossButton = document.getElementById('toss-button');
 const coins = [document.getElementById('coin1'), document.getElementById('coin2'), document.getElementById('coin3')];
 const resultSection = document.getElementById('result-section');
+const dateOfHexagramDisplay = document.getElementById('date-of-hexagram');
 const userQuestionDisplay = document.getElementById('user-question');
 const methodUsedDisplay = document.getElementById('method-used');
 const mainHexagramDisplay = document.getElementById('main-hexagram-display');
@@ -42,6 +42,7 @@ let tossResults = []; // 0 = tails, 1 = heads
 let currentLine = 1;
 let hexagramLines = [];
 let savedHexagrams = JSON.parse(localStorage.getItem('savedHexagrams')) || [];
+let solarDate = null;
 
 const hexagramInstance = new Hexagram();
 
@@ -99,6 +100,12 @@ function startCasting() {
     const question = questionInput.value.trim();
     const isCoinMethod = currentMethod === 'coin';
 
+    if (castButton.textContent === 'Gieo Lại') {
+        resetCasting();
+        questionInput.value = question;
+        return;
+    }
+
     if (!question) {
         alert('Vui lòng nhập câu hỏi của bạn trước khi gieo quẻ.');
         return;
@@ -109,9 +116,26 @@ function startCasting() {
         return;
     }
 
-    userQuestionDisplay.textContent = `"${question}"`;
+    solarDate = new SolarDate(new Date());
+    const lunarDate = solarDate.toLunarDate();
+    hexagramInstance.setSolarDate(solarDate);
+
+    dateOfHexagramDisplay.innerHTML = `
+        Ngày (Dương): ${solarDate.day}/${solarDate.month}/${solarDate.year}
+        <br>
+        Ngày (Âm): ${lunarDate.day}/${lunarDate.month}/${lunarDate.year}
+        <br>
+        Giờ: ${lunarDate.getHourName()} -
+        Ngày: ${lunarDate.getDayName()} -
+        Tháng: ${lunarDate.getMonthName()} -
+        Năm: ${lunarDate.getYearName()}
+    `;
+
+    userQuestionDisplay.textContent = `Hỏi: "${question}"`;
     questionInput.disabled = true;
-    castButton.disabled = true;
+    // castButton.disabled = true;
+
+    castButton.textContent = 'Gieo Lại';
 
     if (isCoinMethod) {
         methodUsedDisplay.textContent = 'Phương pháp: Gieo quẻ đồng xu';
@@ -210,7 +234,8 @@ function tossCoins() {
                 }
             });
             tossButton.disabled = false;
-            currentLineDisplay.textContent = currentLine;
+            // Update current line display
+            currentLineDisplay.textContent = currentLine + 1;
             return;
         }
 
@@ -280,10 +305,19 @@ function displayHexagram(container, lines, changingLines = []) {
     }
 }
 
+function resetCastButton() {
+    castButton.disabled = false;
+    castButton.textContent = '';
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-coins mr-2';
+    castButton.appendChild(icon);
+    castButton.appendChild(document.createTextNode('Gieo Quẻ'));
+}
+
 function resetCasting() {
     questionInput.value = '';
     questionInput.disabled = false;
-    castButton.disabled = false;
+    resetCastButton();
     resultSection.classList.add('hidden');
     coinTossSection.classList.add('hidden');
 
