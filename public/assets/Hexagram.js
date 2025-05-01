@@ -3,8 +3,7 @@ import { trigramData } from './data/trigramData.js';
 
 class Hexagram {
     /**
-     * @param {*} castMethod - The method used to cast the hexagram: coin, plumb
-     * @param {*} castMethodOptions - Options for the casting method
+     * @param {*} castMethod - The method used to cast the hexagram: coin, plum
      * @param {Array} hexagramLines - The lines of the hexagram
      * @param {Array} changingLines - The lines that are changing
      * @param {boolean} completed - Indicates if the casting is completed
@@ -13,14 +12,12 @@ class Hexagram {
      * @param {Object} changedHexagram - The hexagram object after changes
      * @description
      * This class represents a hexagram in the I Ching system.
-     * It provides methods to cast a hexagram using different methods (coin or plumb),
+     * It provides methods to cast a hexagram using different methods (coin or plum),
      * to retrieve the hexagram and its changed version, and to reset the casting process.
      * 
     */
     constructor() {
         this.castMethod = null;
-        this.castMethodOptions = null;
-
         this.hexagramLines = [];
         this.changingLines = [];
         this.completed = false;
@@ -31,11 +28,66 @@ class Hexagram {
     }
 
     getHexagram() {
-        return this.hexagram || null;
+        if (this.hexagram) {
+            return this.hexagram;
+        }
+
+        // If the hexagram is not set, we need to find it based on the current hexagram lines.
+        // Check if the hexagram is completed and has 6 lines
+        if (this.completed && this.hexagramLines.length === 6) {
+            // Because the hexagram lines are built from bottom to top,
+            // we need to reverse them to match the I Ching representation.
+            this.hexagram ||= hexagramData.find(h => h.key === this.hexagramLines.join(""));
+
+            return this.hexagram;
+        }
+        return null;
+    }
+
+    getChangedLines() {
+        if (this.hexagramLines.length !== 6) {
+            return [];
+        }
+
+        const changedLines = this.hexagramLines.slice();
+        this.changingLines.forEach(linePos => {
+            changedLines[linePos] = changedLines[linePos] === 0 ? 1 : 0;
+        });
+        return changedLines;
+    }
+
+    getChangedLines() {
+        if (this.changedLines.length) {
+            return this.changedLines;
+        }
+
+        // If the changing lines are empty, we don't need to change anything
+        if (this.changingLines.length === 0 || this.hexagramLines.length !== 6) {
+            return [];
+        }
+
+        this.changedLines = this.hexagramLines.slice();
+        this.changingLines.forEach(linePos => {
+            this.changedLines[linePos - 1] = this.changedLines[linePos - 1] === 0 ? 1 : 0;
+        });
+
+        return this.changedLines;
     }
 
     getChangedHexagram() {
-        return this.changedHexagram || null;
+        if (this.changedHexagram) {
+            return this.changedHexagram;
+        }
+
+        // If the changed hexagram is not set, we need to find it based on the current changed lines.
+        // Check if the hexagram is completed and has 6 lines
+        if (this.completed && this.hexagramLines.length === 6) {
+            const changedHexagramKey = this.getChangedLines().join("");
+            this.changedHexagram ||= hexagramData.find(h => h.key === changedHexagramKey);
+
+            return this.changedHexagram;
+        }
+        return null;
     }
 
     reset() {
@@ -60,7 +112,6 @@ class Hexagram {
      */
     startCoinMethod() {
         this.castMethod = "coin";
-        this.castMethodOptions = {};
         this.reset();
 
         return this;
@@ -68,7 +119,7 @@ class Hexagram {
 
     /**
      * @description
-     * This method initializes the plumb casting method with the provided numbers.
+     * This method initializes the plum casting method with the provided numbers.
      * The numbers should be an array of three integers.
      * The first number represents the upper trigram, the second number represents the lower trigram,
      * and the third number is used to determine the changing line.
@@ -76,25 +127,24 @@ class Hexagram {
      * The numbers are used to generate the hexagram lines.
      * The method also resets the hexagram state.
      * 
-     * @param {Array} numbers - The numbers to be used for the plumb method
+     * @param {Array} numbers - The numbers to be used for the plum method
      * @returns {Hexagram} - The current instance of the Hexagram class
      * @example
      * const hexagram = new Hexagram();
-     * hexagram.startPlumbMethod([1, 2, 3]);
+     * hexagram.startPlumMethod([1, 2, 3]);
      */
-    startPlumbMethod(numbers = []) {
-        this.castMethod = "plumb";
-        this.castMethodOptions = { numbers: [...numbers] };
+    startPlumMethod() {
+        this.castMethod = "plum";
         this.reset();
 
         return this;
     }
 
     /**
-     * Cast the hexagram using the selected method (coin or plumb)
+     * Cast the hexagram using the selected method (coin or plum)
      * 
      * @description
-     * This method casts the hexagram using the selected method (coin or plumb).
+     * This method casts the hexagram using the selected method (coin or plum).
      * It generates the hexagram lines and determines the changing lines.
      * If the casting is completed, it returns the hexagram and its changed version.
      * 
@@ -104,59 +154,25 @@ class Hexagram {
      * 
      * @returns {Object} - The result of the casting
      */
-    cast() {
-        if (this.completed) {
+    cast(data = []) {
+        if (this.getHexagram()) {
             return {
-                hexagram: this.hexagram,
-                changedHexagram: this.changedHexagram,
+                hexagram: this.getHexagram(),
+                changedHexagram: this.getChangedHexagram(),
                 hexagramLines: this.hexagramLines,
                 changingLines: this.changingLines,
-                plumbNumbers: this.castMethodOptions.numbers,
+                changedLines: this.getChangedLines(),
                 castMethod: this.castMethod,
-                currentLine: this.castMethod === "coin" ? this.currentLine - 1 : null,
-                completed: this.completed
             };
         }
 
         if (this.castMethod === "coin") {
-            return this.castWithCoins();
-        } else if (this.castMethod === "plumb") {
-            return this.castWithPlumb();
+            return this.castWithCoins(data);
+        } else if (this.castMethod === "plum") {
+            return this.castWithPlum(data);
         }
     }
 
-    castWithCoins() {
-        const tossResults = this.tossCoins();
-        const headsCount = tossResults.filter(r => r === 0).length;
-        const isChanging = headsCount === 3 || headsCount === 0;
-        const lineType = headsCount % 2 === 0 ? 0 : 1;
-
-        // Note: The hexagram lines are built from bottom to top, so we need to reverse them
-        // to match the I Ching representation.
-        this.hexagramLines.unshift(lineType);
-        if (isChanging) {
-            this.changingLines.push(this.currentLine);
-        }
-
-        if (this.currentLine < 6) {
-            this.currentLine++;
-        } else {
-            this.completed = true;
-            this.setTossCoinResult();
-        }
-
-        return {
-            hexagram: this.getHexagram(),
-            changedHexagram: this.getChangedHexagram(),
-            currentLine: this.currentLine - (this.completed ? 0 : 1),
-            plumbNumbers: this.castMethodOptions.numbers,
-            castMethod: this.castMethod,
-            hexagramLines: this.hexagramLines,
-            changingLines: [...this.changingLines],
-            changedLines: this.changedLines,
-            completed: this.completed,
-        };
-    }
 
     /**
      * @description
@@ -166,44 +182,88 @@ class Hexagram {
      * @returns {Array} - The results of the coin toss
      */
     tossCoins() {
-        const tossResults = [0, 0, 0];
+        const currentTossCoins = [0, 0, 0];
 
-        for (let i = 0; i < 3; i++) {
-            const result = Math.floor(Math.random() * 2);
-            tossResults[i] = result;
+        if (this.completed) {
+            throw new Error("Số lần gieo đã hoàn thành.");
         }
 
-        return tossResults;
+        // Simulate tossing three coins
+        // 0 = tails, 1 = heads
+        for (let i = 0; i < 3; i++) {
+            currentTossCoins[i] = Math.floor(Math.random() * 2);
+        }
+
+        this.currentLine++;
+        if (this.currentLine > 6) {
+            this.completed = true;
+        }
+
+        return {
+            completed: this.completed,
+            currentTossCoins: currentTossCoins,
+            currentLine: this.currentLine - 1,
+        };
     }
 
     /**
+     * 
+     * @param {Array} tossCoinResults - The results of the coin toss
      * @description
-     * This method sets the hexagram and changed hexagram based on the current hexagram lines.
-     * It generates the changed hexagram by flipping the changing lines.
+     * This method casts the hexagram using the coin method.
+     * It generates the hexagram lines and determines the changing lines.
+     * @returns {Object} - The result of the casting
+     * @example
+     * const hexagram = new Hexagram();
+     * hexagram.startCoinMethod();
+     * const result = hexagram.castWithCoins([[0, 1, 0], [1, 0, 1], [0, 0, 0], [1, 1, 1], [0, 1, 1], [1, 0, 0]]);
      */
-    setTossCoinResult() {
-        // Generate changed hexagram by flipping changing lines
-        const reversedHexagramLines = [...this.hexagramLines].reverse();
-        const changedLines = [...reversedHexagramLines];
+    castWithCoins(tossCoinResults = []) {
+        if (tossCoinResults.length !== 6) {
+            throw new Error("Phương pháp Tung Đồng Xu yêu cầu 6 lần gieo.");
+        }
 
-        this.changingLines.forEach(linePos => {
-            changedLines[linePos] = changedLines[linePos] === 0 ? 1 : 0;
-        });
+        for (let line = 0; line < tossCoinResults.length; line++) {
+            const tossedResult = tossCoinResults[line];
+            const headsCount = tossedResult.filter(r => r === 0).length;
+            const isChanging = headsCount === 3 || headsCount === 0;
+            // 2, 3 heads = 0 (yin); 0, 1 heads = 1 (yang)
+            const lineType = [2, 3].includes(headsCount) ? 0 : 1;
 
-        this.changedLines = [...changedLines].reverse();
-        this.hexagram = hexagramData.find(h => h.key === reversedHexagramLines.join(""));
-        this.changedHexagram = hexagramData.find(h => h.key === changedLines.join(""));
+            // Note: The hexagram lines are built from bottom to top, so
+            // we need to reverse them to match the I Ching representation.
+            this.hexagramLines.push(lineType);
+            if (isChanging) {
+                this.changingLines.push(line + 1);
+            }
+        };
+
+        console.log({ changingLines: this.changingLines });
+        console.log({ hexagramLines: this.hexagramLines });
+
+        return {
+            hexagram: this.getHexagram(),
+            changedHexagram: this.getChangedHexagram(),
+            hexagramLines: this.hexagramLines,
+            changingLines: this.changingLines,
+            changedLines: this.getChangedLines(),
+            castMethod: this.castMethod,
+        }
     }
 
     /**
      * @description
-     * This method casts the hexagram using the plumb method.
+     * This method casts the hexagram using the plum method.
      * It generates the hexagram lines and determines the changing lines.
      * 
+     * @param {Array} numbers - The numbers to be used for the plum method
      * @returns {Object} - The result of the casting
      */
-    castWithPlumb() {
-        const numbers = this.castMethodOptions.numbers;
+    castWithPlum(numbers = []) {
+        if (numbers.length != 3) {
+            throw new Error("Phương pháp lập quẻ Mai Hoa yêu cầu 3 số.");
+        }
+
         const upperNum = numbers[0] % 8 || 8;
         const lowerNum = numbers[1] % 8 || 8;
         const changingLineNum = numbers.reduce((a, n) => a + Math.abs(n)) % 6 || 6;
@@ -212,29 +272,22 @@ class Hexagram {
         const lowerNum2Binary = trigramData[lowerNum - 1];
 
         // Generate hexagram lines
-        this.hexagramLines = [...lowerNum2Binary].reverse().concat([...upperNum2Binary].reverse());
-        // Set changing line (1-based index)
-        this.changingLines.push(changingLineNum - 1); // convert to 0-based
+        this.hexagramLines = [...upperNum2Binary].reverse().concat([...lowerNum2Binary].reverse());
 
-        // Generate changed hexagram by flipping the changing line
-        this.changedLines = [...this.hexagramLines];
-        this.changedLines[Math.abs(changingLineNum - 1)] = this.changedLines[Math.abs(changingLineNum - 1)] === 0 ? 1 : 0;
+        // Determine changing lines
+        this.changingLines.push(changingLineNum);
 
-        // Find hexagrams based on keys
-        this.hexagram = hexagramData.find(h => h.key === this.hexagramLines.join(""));
-        this.changedHexagram = hexagramData.find(h => h.key === this.changedLines.join(""));
+        // For the plum method, completed is always true
+        this.completed = true;
 
         return {
             hexagram: this.getHexagram(),
             changedHexagram: this.getChangedHexagram(),
-            currentLine: null,
-            plumbNumbers: [...this.castMethodOptions.numbers],
-            castMethod: this.castMethod,
             hexagramLines: this.hexagramLines,
-            changingLines: [changingLineNum],
-            changedLines: this.changedLines,
-            completed: true,
-        };
+            changingLines: this.changingLines,
+            changedLines: this.getChangedLines(),
+            castMethod: this.castMethod,
+        }
     }
 }
 

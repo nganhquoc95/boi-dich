@@ -159,7 +159,7 @@ const hexagramData = [
     {
         key: "000001",
         number: 23,
-        name: "Địa Sơn Bác",
+        name: "Sơn Địa Bác",
         judgment: "Quẻ Bác chỉ sự suy yếu. Thời kỳ khó khăn, nội lực bị bào mòn.",
         advice: "Thu mình chờ thời. Tập trung củng cố nội lực."
     },

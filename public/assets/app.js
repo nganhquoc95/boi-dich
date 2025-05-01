@@ -1,5 +1,6 @@
-import * as hexagrams from './hexagrams.js';
-import * as eightTrigramsInnate from './eightTrigrams.js';
+import { hexagramData } from './data/hexagramData.js';
+import { trigramData } from './data/trigramData.js';
+import { Hexagram } from './Hexagram.js';
 
 // DOM elements
 const questionInput = document.getElementById('question-input');
@@ -37,10 +38,12 @@ let currentMethod = 'coin'; // 'coin' or 'plum'
 let currentHexagram = null;
 let changingLines = [];
 let changedHexagram = null;
-let tossResults = [0, 0, 0]; // 0 = heads, 1 = tails
+let tossResults = []; // 0 = tails, 1 = heads
 let currentLine = 1;
 let hexagramLines = [];
 let savedHexagrams = JSON.parse(localStorage.getItem('savedHexagrams')) || [];
+
+const hexagramInstance = new Hexagram();
 
 // Event listeners
 castButton.addEventListener('click', startCasting);
@@ -128,8 +131,12 @@ function startCoinMethod() {
     currentLine = 1;
     currentLineDisplay.textContent = currentLine;
 
+    // Start the coin toss
+    hexagramInstance.startCoinMethod();
+
     // Reset coins
-    tossResults = [0, 0, 0];
+    tossResults = [];
+
     coins.forEach(coin => {
         coin.classList.remove('tossing', 'coin-tails');
         coin.classList.add('coin-heads');
@@ -157,35 +164,16 @@ function startPlumMethod() {
         parseInt(plumNumberInputs[2].value)
     ];
 
-    // Generate hexagram using Plum Blossom method
-    generatePlumBlossomHexagram(numbers);
-}
+    hexagramInstance.startPlumMethod();
+    const data = hexagramInstance.cast(numbers);
 
-function generatePlumBlossomHexagram(numbers) {
-    const upperNum = numbers[0] % 8 || 8;
-    const lowerNum = numbers[1] % 8 || 8;
-    const changingLineNum = numbers.reduce((a, n) => a + Math.abs(n)) % 6 || 6;
-
-    const upperNum2Binary = eightTrigramsInnate[upperNum - 1];
-    const lowerNum2Binary = eightTrigramsInnate[lowerNum - 1];
-
-    // Generate hexagram lines
-    hexagramLines = [[...upperNum2Binary].reverse(), [...lowerNum2Binary].reverse()].flat();
-    changingLines = [];
-
-    // Set changing line (1-based index)
-    changingLines.push(changingLineNum - 1); // convert to 0-based
-
-    // Generate changed hexagram by flipping the changing line
-    const changedLines = [...hexagramLines];
-    changedLines[Math.abs(changingLineNum - 1)] = changedLines[Math.abs(changingLineNum - 1)] === 0 ? 1 : 0;
-
-    // Find hexagrams based on keys
-    currentHexagram = hexagrams.find(h => h.key === hexagramLines.join(""));
-    changedHexagram = hexagrams.find(h => h.key === changedLines.join(""));
+    hexagramLines = data.hexagramLines;
+    changingLines = data.changingLines;
+    currentHexagram = data.hexagram;
+    changedHexagram = data.changedHexagram;
 
     // Display results
-    displayResults(hexagramLines, changingLines, changedLines);
+    displayResults(hexagramLines, changingLines, data.changedLines);
 }
 
 function tossCoins() {
@@ -199,99 +187,55 @@ function tossCoins() {
 
     // Stop tossing after 1.5 seconds and show results
     setTimeout(() => {
-        coins.forEach((coin, index) => {
-            coin.classList.remove('tossing');
+        const {
+            completed,
+            currentTossCoins,
+            currentLine,
+        } = hexagramInstance.tossCoins();
 
-            // Random result (0 = heads, 1 = tails)
-            const result = Math.floor(Math.random() * 2);
-            tossResults[index] = result;
+        tossResults.push(currentTossCoins);
 
-            if (result === 0) {
-                coin.classList.remove('coin-tails');
-                coin.classList.add('coin-heads');
-                coin.textContent = 'H';
-            } else {
-                coin.classList.remove('coin-heads');
-                coin.classList.add('coin-tails');
-                coin.textContent = 'T';
-            }
-        });
-
-        // Determine line type based on coin toss results
-        // In I Ching: 
-        // 3 heads = old yang (changing yang)
-        // 3 tails = old yin (changing yin)
-        // 2 heads + 1 tail = young yang
-        // 2 tails + 1 head = young yin
-
-        const headsCount = tossResults.filter(r => r === 0).length;
-        let lineType, isChanging;
-
-        if (headsCount === 3) {
-            lineType = 1; // yang
-            isChanging = true;
-        } else if (headsCount === 0) {
-            lineType = 0; // yin
-            isChanging = true;
-        } else if (headsCount === 2) {
-            lineType = 1; // yang
-            isChanging = false;
-        } else {
-            lineType = 0; // yin
-            isChanging = false;
-        }
-
-        // Add to hexagram lines (from bottom to top)
-        hexagramLines.unshift(lineType);
-
-        // If changing line, record its position (0-based, bottom to top)
-        if (isChanging) {
-            changingLines.push(currentLine - 1); // because we're building from bottom
-        }
-
-        // Move to next line or finish
-        if (currentLine < 6) {
-            currentLine++;
-            currentLineDisplay.textContent = currentLine;
+        if (!completed) {
+            coins.forEach((coin, index) => {
+                coin.classList.remove('tossing');
+    
+                if (currentTossCoins[index] === 1) {
+                    coin.classList.remove('coin-tails');
+                    coin.classList.add('coin-heads');
+                    coin.textContent = 'H';
+                } else {
+                    coin.classList.remove('coin-heads');
+                    coin.classList.add('coin-tails');
+                    coin.textContent = 'T';
+                }
+            });
             tossButton.disabled = false;
-        } else {
-            // Reverse the hexagram lines for correct display
-            // Note: The hexagram lines are built from bottom to top, so we need to reverse them
-            // to match the I Ching representation.
-            // Example: [1, 0, 0, 1, 1, 0] becomes [0, 1, 1, 0, 0, 1]
-            hexagramLines = [...hexagramLines].reverse();
-
-            // Hexagram complete, interpret results
-            interpretCoinResults();
+            currentLineDisplay.textContent = currentLine;
+            return;
         }
+
+        const data = hexagramInstance.cast(tossResults);
+
+        hexagramLines = data.hexagramLines;
+        changingLines = data.changingLines;
+        currentHexagram = data.hexagram;
+        changedHexagram = data.changedHexagram;
+
+        displayResults(hexagramLines, changingLines, data.changedLines);
     }, 1500);
-}
-
-function interpretCoinResults() {
-    // Generate changed hexagram by flipping changing lines
-    const changedLines = [...hexagramLines];
-    changingLines.forEach(linePos => {
-        changedLines[linePos] = changedLines[linePos] === 0 ? 1 : 0;
-    });
-
-    currentHexagram = hexagrams.find(h => h.key === hexagramLines.join(""));
-    changedHexagram = hexagrams.find(h => h.key === changedLines.join(""));
-
-    // Display results
-    displayResults(hexagramLines, changingLines, changedLines);
 }
 
 function displayResults(mainLines, changingLines, changedLines) {
     // Display main hexagram
     displayHexagram(mainHexagramDisplay, mainLines, changingLines);
-    mainHexagramName.textContent = `Quẻ: ${currentHexagram.name}`;
+    mainHexagramName.textContent = `${currentHexagram.name}`;
     mainHexagramNumber.textContent = `Số: ${currentHexagram.number}`;
     mainHexagramJudgment.innerHTML = `<p>${currentHexagram.judgment}</p>`;
 
     // Display changed hexagram if there are changing lines
     if (changingLines.length > 0) {
         displayHexagram(changedHexagramDisplay, changedLines);
-        changedHexagramName.textContent = `Quẻ: ${changedHexagram.name}`;
+        changedHexagramName.textContent = `${changedHexagram.name}`;
         changedHexagramNumber.textContent = `Số: ${changedHexagram.number}`;
         changedHexagramJudgment.innerHTML = `<p>${changedHexagram.judgment}</p>`;
         document.getElementById('changing-section').classList.remove('hidden');
@@ -323,7 +267,8 @@ function displayHexagram(container, lines, changingLines = []) {
     // Create the lines (from bottom to top for correct display)
     for (let i = 5; i >= 0; i--) {
         const line = document.createElement('div');
-        const isChanging = changingLines.includes(i);
+        // Changing lines are 1-indexed, so we need to adjust for 0-indexed array
+        const isChanging = changingLines.includes(i + 1);
 
         if (lines[i] === 0) {
             line.className = isChanging ? 'yin-line broken moving-line' : 'yin-line broken';
@@ -346,7 +291,7 @@ function resetCasting() {
     plumNumberInputs.forEach(input => input.value = '');
 
     // Reset coins
-    tossResults = [0, 0, 0];
+    tossResults = [];
     coins.forEach(coin => {
         coin.classList.remove('tossing', 'coin-tails');
         coin.classList.add('coin-heads');
