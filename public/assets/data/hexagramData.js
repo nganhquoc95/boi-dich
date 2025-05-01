@@ -1,7 +1,7 @@
 // Hexagram data - expanded to 64 hexagrams
 // key: the key is a string of 6 binary digits (0 or 1), with the reversed binary digits
 // representing the lines of the hexagram 1 = solid line (positive), 0 = broken line (negative)
-const hexagrams = [
+const hexagramData = [
     {
         key: "111111",
         number: 1,
@@ -452,4 +452,4 @@ const hexagrams = [
     }
 ];
 
-export default hexagrams;
+export { hexagramData };

@@ -1,4 +1,4 @@
-const eightTrigramsInnate = [
+const trigramData = [
     [1, 1, 1], // Càn
     [0, 1, 1], // Đoài
     [1, 0, 1], // Ly
@@ -9,4 +9,4 @@ const eightTrigramsInnate = [
     [0, 0, 0], // Khôn
 ];
 
-export default eightTrigramsInnate;
+export { trigramData };
