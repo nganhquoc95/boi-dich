@@ -22,9 +22,6 @@ const changedHexagramNumber = document.getElementById('changed-hexagram-number')
 const changedHexagramJudgment = document.getElementById('changed-hexagram-judgment');
 const hexagramAdvice = document.getElementById('hexagram-advice');
 const newCastButton = document.getElementById('new-cast-button');
-const saveButton = document.getElementById('save-button');
-const savedReadings = document.getElementById('saved-readings');
-const savedList = document.getElementById('saved-list');
 const methodTabs = document.querySelectorAll('.method-tab');
 const methodContents = document.querySelectorAll('.method-content');
 const plumNumberInputs = [
@@ -41,7 +38,6 @@ let changedHexagram = null;
 let tossResults = []; // 0 = tails, 1 = heads
 let currentLine = 1;
 let hexagramLines = [];
-let savedHexagrams = JSON.parse(localStorage.getItem('savedHexagrams')) || [];
 let solarDate = null;
 
 const hexagramInstance = new Hexagram();
@@ -50,7 +46,6 @@ const hexagramInstance = new Hexagram();
 castButton.addEventListener('click', startCasting);
 tossButton.addEventListener('click', tossCoins);
 newCastButton.addEventListener('click', resetCasting);
-saveButton.addEventListener('click', saveReading);
 
 // Method tab switching
 methodTabs.forEach(tab => {
@@ -300,12 +295,6 @@ function displayResults({ hexagramLines, changingLines, changedLines, familyLine
     // Show results
     coinTossSection.classList.add('hidden');
     resultSection.classList.remove('hidden');
-
-    // Show saved readings if any
-    if (savedHexagrams.length > 0) {
-        savedReadings.classList.remove('hidden');
-        displaySavedReadings();
-    }
 }
 
 function displayHexagram({ container, hexagramLines, hexagramFamilyLines = [], changingLines = [] }) {
@@ -371,126 +360,4 @@ function resetCasting() {
     changingLines = [];
     hexagramLines = [];
     currentLine = 1;
-}
-
-function saveReading() {
-    if (!currentHexagram) return;
-
-    const reading = {
-        method: currentMethod,
-        hexagram: currentHexagram,
-        changedHexagram: changedHexagram,
-        changingLines: [...changingLines],
-        question: userQuestionDisplay.textContent,
-        date: new Date().toLocaleString()
-    };
-
-    savedHexagrams.push(reading);
-    localStorage.setItem('savedHexagrams', JSON.stringify(savedHexagrams));
-
-    alert('Đã lưu kết quả gieo quẻ!');
-    savedReadings.classList.remove('hidden');
-    displaySavedReadings();
-}
-
-function displaySavedReadings() {
-    savedList.innerHTML = '';
-
-    savedHexagrams.forEach((reading, index) => {
-        const readingElement = document.createElement('div');
-        readingElement.className = 'bg-amber-50 p-4 rounded-lg border border-amber-200';
-
-        let changingLinesText = '';
-        if (reading.changingLines && reading.changingLines.length > 0) {
-            const lines = reading.changingLines.map(pos => 6 - pos).join(', ');
-            changingLinesText = `<p class="text-gray-700 text-sm">Hào động: ${lines}</p>`;
-        }
-
-        readingElement.innerHTML = `
-            <div class="flex justify-between items-start mb-2">
-                <div>
-                    <h3 class="font-semibold text-amber-800">${reading.hexagram.name}</h3>
-                    ${reading.changedHexagram ?
-                `<p class="text-gray-700 text-sm">Biến thành: ${reading.changedHexagram.name}</p>` : ''}
-                    ${changingLinesText}
-                </div>
-                <div class="text-right">
-                    <span class="text-sm text-gray-500">${reading.date}</span>
-                    <p class="text-xs text-gray-500">${reading.method === 'coin' ? 'Đồng xu' : 'Mai Hoa'}</p>
-                </div>
-            </div>
-            <p class="text-gray-700 mb-2"><span class="font-medium">Câu hỏi:</span> ${reading.question}</p>
-            <button onclick="viewSavedReading(${index})" class="text-amber-600 hover:text-amber-800 text-sm font-medium">
-                <i class="fas fa-eye mr-1"></i>Xem chi tiết
-            </button>
-            <button onclick="deleteSavedReading(${index})" class="text-red-500 hover:text-red-700 text-sm font-medium ml-4">
-                <i class="fas fa-trash-alt mr-1"></i>Xóa
-            </button>
-        `;
-        savedList.appendChild(readingElement);
-    });
-}
-
-// These need to be global to be callable from onclick attributes
-window.viewSavedReading = function (index) {
-    if (index >= 0 && index < savedHexagrams.length) {
-        const reading = savedHexagrams[index];
-        currentHexagram = reading.hexagram;
-        changedHexagram = reading.changedHexagram;
-        changingLines = reading.changingLines || [];
-
-        // Generate lines for display
-        const mainLines = currentHexagram.key.split('').map(Number);
-        const changedLines = changedHexagram.key.split('').map(Number);
-
-        // Display
-        displayHexagram(mainHexagramDisplay, mainLines, changingLines);
-        mainHexagramName.textContent = `Quẻ: ${currentHexagram.name}`;
-        mainHexagramNumber.textContent = `Số: ${currentHexagram.number}`;
-        mainHexagramJudgment.innerHTML = `<p>${currentHexagram.judgment}</p>`;
-
-        if (changingLines.length > 0 && changedHexagram) {
-            displayHexagram(changedHexagramDisplay, changedLines);
-            changedHexagramName.textContent = `Quẻ: ${changedHexagram.name}`;
-            changedHexagramNumber.textContent = `Số: ${changedHexagram.number}`;
-            changedHexagramJudgment.innerHTML = `<p>${changedHexagram.judgment}</p>`;
-            document.getElementById('changing-section').classList.remove('hidden');
-        } else {
-            document.getElementById('changing-section').classList.add('hidden');
-        }
-
-        userQuestionDisplay.textContent = reading.question;
-        methodUsedDisplay.textContent = `Phương pháp: ${reading.method === 'coin' ? 'Gieo quẻ đồng xu' : 'Mai Hoa Dịch Số'}`;
-
-        // Generate combined advice
-        let advice = currentHexagram.advice;
-        if (changingLines.length > 0 && changedHexagram) {
-            advice += `<br><br>Với hào động, ${changedHexagram.advice.toLowerCase()}`;
-        }
-        hexagramAdvice.innerHTML = `<p>${advice}</p>`;
-
-        resultSection.classList.remove('hidden');
-        coinTossSection.classList.add('hidden');
-
-        // Scroll to result section
-        resultSection.scrollIntoView({ behavior: 'smooth' });
-    }
-};
-
-window.deleteSavedReading = function (index) {
-    if (confirm('Bạn có chắc muốn xóa lần gieo quẻ này?')) {
-        savedHexagrams.splice(index, 1);
-        localStorage.setItem('savedHexagrams', JSON.stringify(savedHexagrams));
-        displaySavedReadings();
-
-        if (savedHexagrams.length === 0) {
-            savedReadings.classList.add('hidden');
-        }
-    }
-};
-
-// Initialize saved readings display if any
-if (savedHexagrams.length > 0) {
-    displaySavedReadings();
-    savedReadings.classList.remove('hidden');
 }
