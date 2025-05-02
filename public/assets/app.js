@@ -197,7 +197,13 @@ function startPlumMethod() {
     changedHexagram = data.changedHexagram;
 
     // Display results
-    displayResults(hexagramLines, changingLines, data.changedLines);
+    displayResults({
+        hexagramLines,
+        changingLines,
+        changedLines: data.changedLines,
+        familyLines: currentHexagram.familyLines,
+        changedFamilyLines: changedHexagram.familyLines
+    });
 }
 
 function tossCoins() {
@@ -246,20 +252,36 @@ function tossCoins() {
         currentHexagram = data.hexagram;
         changedHexagram = data.changedHexagram;
 
-        displayResults(hexagramLines, changingLines, data.changedLines);
+        displayResults({
+            hexagramLines,
+            changingLines,
+            changedLines: data.changedLines,
+            familyLines: currentHexagram.familyLines,
+            changedFamilyLines: changedHexagram.familyLines
+        });
     }, 1500);
 }
 
-function displayResults(mainLines, changingLines, changedLines) {
+function displayResults({ hexagramLines, changingLines, changedLines, familyLines = [], changedFamilyLines = [] }) {
     // Display main hexagram
-    displayHexagram(mainHexagramDisplay, mainLines, changingLines);
+    displayHexagram({
+        container: mainHexagramDisplay,
+        hexagramLines: hexagramLines,
+        hexagramFamilyLines: familyLines,
+        changingLines: changingLines
+    });
     mainHexagramName.textContent = `${currentHexagram.name}`;
     mainHexagramNumber.textContent = `Số: ${currentHexagram.number}`;
     mainHexagramJudgment.innerHTML = `<p>${currentHexagram.judgment}</p>`;
 
     // Display changed hexagram if there are changing lines
     if (changingLines.length > 0) {
-        displayHexagram(changedHexagramDisplay, changedLines);
+        // displayHexagram(changedHexagramDisplay, changedLines);
+        displayHexagram({
+            container: changedHexagramDisplay,
+            hexagramLines: changedLines,
+            hexagramFamilyLines: changedFamilyLines,
+        });
         changedHexagramName.textContent = `${changedHexagram.name}`;
         changedHexagramNumber.textContent = `Số: ${changedHexagram.number}`;
         changedHexagramJudgment.innerHTML = `<p>${changedHexagram.judgment}</p>`;
@@ -286,22 +308,34 @@ function displayResults(mainLines, changingLines, changedLines) {
     }
 }
 
-function displayHexagram(container, lines, changingLines = []) {
+function displayHexagram({ container, hexagramLines, hexagramFamilyLines = [], changingLines = [] }) {
     container.innerHTML = '';
+
+    const containerHexagram = document.createElement('div');
+    containerHexagram.className = 'hexagram';
+    container.appendChild(containerHexagram);
+
+    const containerHexagramLines = document.createElement('div');
+    containerHexagramLines.className = 'hexagram-lines text-left ml-4';
+    container.appendChild(containerHexagramLines);
 
     // Create the lines (from bottom to top for correct display)
     for (let i = 5; i >= 0; i--) {
         const line = document.createElement('div');
+        const familyLine = document.createElement('div');
+        familyLine.textContent = hexagramFamilyLines[5 - i] || '';
+
         // Changing lines are 1-indexed, so we need to adjust for 0-indexed array
         const isChanging = changingLines.includes(i + 1);
 
-        if (lines[i] === 0) {
+        if (hexagramLines[i] === 0) {
             line.className = isChanging ? 'yin-line broken moving-line' : 'yin-line broken';
         } else {
             line.className = isChanging ? 'yang-line moving-line' : 'yang-line';
         }
 
-        container.appendChild(line);
+        containerHexagram.appendChild(line);
+        containerHexagramLines.appendChild(familyLine);
     }
 }
 
