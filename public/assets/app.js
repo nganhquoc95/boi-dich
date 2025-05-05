@@ -223,7 +223,7 @@ function tossCoins() {
         if (!completed) {
             coins.forEach((coin, index) => {
                 coin.classList.remove('tossing');
-    
+
                 if (currentTossCoins[index] === 1) {
                     coin.classList.remove('coin-tails');
                     coin.classList.add('coin-heads');
@@ -300,32 +300,57 @@ function displayResults({ hexagramLines, changingLines, changedLines, familyLine
 function displayHexagram({ container, hexagramLines, hexagramFamilyLines = [], changingLines = [] }) {
     container.innerHTML = '';
 
-    const containerHexagram = document.createElement('div');
-    containerHexagram.className = 'hexagram';
-    container.appendChild(containerHexagram);
+    const twelveBranchContainer = createHexagramSection('hexagram-lines text-left mr-5');
+    const containerHexagram = createHexagramSection('hexagram');
+    const containerHexagramLines = createHexagramSection('twelve-branch-lines text-left ml-4');
 
-    const containerHexagramLines = document.createElement('div');
-    containerHexagramLines.className = 'hexagram-lines text-left ml-4';
+    container.appendChild(twelveBranchContainer);
+    container.appendChild(containerHexagram);
     container.appendChild(containerHexagramLines);
 
     // Create the lines (from bottom to top for correct display)
     for (let i = 5; i >= 0; i--) {
-        const line = document.createElement('div');
-        const familyLine = document.createElement('div');
-        familyLine.textContent = hexagramFamilyLines[5 - i] || '';
+        const line = createHexagramLine(hexagramLines[i], changingLines.includes(i + 1));
+        const familyLineText = hexagramFamilyLines[5 - i] || '';
+        const { lucThanText, diaChiText } = splitFamilyLineText(familyLineText);
 
-        // Changing lines are 1-indexed, so we need to adjust for 0-indexed array
-        const isChanging = changingLines.includes(i + 1);
+        const lucThanEle = createTextElement(lucThanText);
+        const diaChiEle = createTextElement(diaChiText);
 
-        if (hexagramLines[i] === 0) {
-            line.className = isChanging ? 'yin-line broken moving-line' : 'yin-line broken';
-        } else {
-            line.className = isChanging ? 'yang-line moving-line' : 'yang-line';
-        }
-
+        twelveBranchContainer.appendChild(lucThanEle);
         containerHexagram.appendChild(line);
-        containerHexagramLines.appendChild(familyLine);
+        containerHexagramLines.appendChild(diaChiEle);
     }
+}
+
+function createHexagramSection(className) {
+    const section = document.createElement('div');
+    section.className = className;
+    return section;
+}
+
+function createHexagramLine(lineType, isChanging) {
+    const line = document.createElement('div');
+    if (lineType === 0) {
+        line.className = isChanging ? 'yin-line broken moving-line' : 'yin-line broken';
+    } else {
+        line.className = isChanging ? 'yang-line moving-line' : 'yang-line';
+    }
+    return line;
+}
+
+function splitFamilyLineText(familyLineText) {
+    const splitWords = familyLineText.split(' ');
+    return {
+        lucThanText: splitWords.slice(0, 2).join(" "),
+        diaChiText: splitWords.slice(2).join(" ")
+    };
+}
+
+function createTextElement(text) {
+    const element = document.createElement('div');
+    element.textContent = text;
+    return element;
 }
 
 function resetCastButton() {
